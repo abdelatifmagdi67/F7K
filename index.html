@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم التنين - Voxel Dragon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-color: #0b0f19; 
+            color: #ffffff; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            touch-action: none; 
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between h-screen p-4 select-none overflow-hidden">
+
+    <!-- شريط العنوان -->
+    <header class="w-full max-w-md bg-slate-900/80 backdrop-blur border border-slate-800 p-3 rounded-2xl text-center shadow-lg">
+        <h1 class="text-amber-400 font-bold text-base">🐉 لوحة تحكم التنين</h1>
+        <p id="status" class="text-xs text-slate-400 mt-0.5">جاهز للاتصال والتحكم</p>
+    </header>
+
+    <!-- أزرار اختيار الحركة (Gaits) -->
+    <div class="w-full max-w-md grid grid-cols-4 gap-2 my-2">
+        <button onclick="sendCommand('gait', 'Idle')" class="bg-slate-800 hover:bg-amber-600 border border-slate-700 py-2 rounded-xl text-xs font-bold transition active:scale-95">Idle</button>
+        <button onclick="sendCommand('gait', 'Walk')" class="bg-slate-800 hover:bg-amber-600 border border-slate-700 py-2 rounded-xl text-xs font-bold transition active:scale-95">Walk</button>
+        <button onclick="sendCommand('gait', 'Run')" class="bg-slate-800 hover:bg-amber-600 border border-slate-700 py-2 rounded-xl text-xs font-bold transition active:scale-95">Run</button>
+        <button onclick="sendCommand('gait', 'Quad Run')" class="bg-slate-800 hover:bg-amber-600 border border-slate-700 py-2 rounded-xl text-xs font-bold transition active:scale-95">Quad</button>
+    </div>
+
+    <!-- أزرار الأكشن السريعة -->
+    <div class="w-full max-w-md grid grid-cols-3 gap-2 mb-2">
+        <button onclick="sendCommand('action', 'roar')" class="bg-red-600/90 hover:bg-red-500 py-3 rounded-xl font-bold text-xs shadow transition active:scale-95">🔥 زئير ونار</button>
+        <button onclick="sendCommand('action', 'come')" class="bg-blue-600/90 hover:bg-blue-500 py-3 rounded-xl font-bold text-xs shadow transition active:scale-95">🦅 نداء التنين</button>
+        <button onclick="sendCommand('action', 'jump')" class="bg-emerald-600/90 hover:bg-emerald-500 py-3 rounded-xl font-bold text-xs shadow transition active:scale-95">⬆️ قفز</button>
+    </div>
+
+    <!-- منطقة الجويستيك الافتراضي للحركة -->
+    <div class="flex-grow flex items-center justify-center w-full my-auto">
+        <div id="joystick-zone" class="relative w-44 h-44 bg-slate-900/60 border-2 border-amber-500/30 rounded-full flex items-center justify-center shadow-inner">
+            <div id="stick" class="absolute w-16 h-16 bg-amber-500 rounded-full shadow-lg cursor-pointer transition-transform duration-75 flex items-center justify-center">
+                <div class="w-4 h-4 bg-amber-600 rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // رابط الـ API أو السيرفر (يمكنك تعديله لاحقاً عند ربطه)
+        const BRIDGE_URL = "https://your-server-endpoint.com/api"; 
+
+        function updateStatus(text, color = "text-slate-400") {
+            const statusEl = document.getElementById('status');
+            statusEl.innerText = text;
+            statusEl.className = `text-xs mt-0.5 ${color}`;
+        }
+
+        async function sendCommand(type, val) {
+            let payload = {};
+            if(type === 'gait') payload = { action: 'gait', value: val };
+            if(type === 'action') payload = { action: val };
+
+            updateStatus("جاري إرسال الأمر...", "text-amber-400");
+            
+            try {
+                // إرسال الطلب
+                /* 
+                await fetch(BRIDGE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                */
+                updateStatus("تم التنفيذ بنجاح!", "text-emerald-400");
+            } catch (e) {
+                updateStatus("⚠️ خطأ في الاتصال", "text-red-400");
+            }
+        }
+
+        // إعداد حركة الجويستيك اللمسية
+        const stick = document.getElementById('stick');
+        const zone = document.getElementById('joystick-zone');
+        let active = false;
+
+        zone.addEventListener('pointerdown', (e) => { active = true; });
+        window.addEventListener('pointerup', () => { 
+            active = false; 
+            stick.style.transform = `translate(0px, 0px)`;
+            sendCommand('move', {x: 0, y: 0});
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!active) return;
+            const rect = zone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let dx = e.clientX - centerX;
+            let dy = e.clientY - centerY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const maxRadius = 50;
+
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+
+            stick.style.transform = `translate(${dx}px, ${dy}px)`;
+            
+            let normX = dx / maxRadius;
+            let normY = -dy / maxRadius;
+            
+            // إرسال اتجاه الحركة
+            // fetch(BRIDGE_URL, { ... body: JSON.stringify({ action: 'move', x: normX, y: normY }) })
+        });
+    </script>
+</body>
+</html>
